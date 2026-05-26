@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIVERALERT AI - Driver Safety Web Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Consolas&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Model Loading Screen Overlay -->
+    <div id="loading-screen" class="loading-overlay">
+        <div class="spinner"></div>
+        <h2 class="loading-title">INITIALIZING DRIVERALERT AI</h2>
+        <p class="loading-subtitle">Loading WebAssembly Face Landmark Models...</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Top Banner Header -->
+        <header class="header">
+            <h1 class="title">DRIVERALERT AI</h1>
+            <span class="divider"></span>
+            <p class="subtitle">ACTIVE DRIVER MONITORING SYSTEM & ENGINE KILL-SWITCH EMULATOR</p>
+        </header>
+
+        <!-- Dashboard Layout -->
+        <main class="dashboard-grid">
+            <!-- Left Side: Driving Simulator -->
+            <section class="card game-card">
+                <h3 class="card-header">VEHICLE DRIVING SIMULATOR (Steer: Left/Right Arrows or A/D)</h3>
+                <div class="game-container">
+                    <canvas id="game-canvas" width="860" height="478"></canvas>
+                </div>
+            </section>
+
+            <!-- Right Side: Engine Controls & Telemetry -->
+            <aside class="sidebar">
+                <!-- Compact Driver Monitor Panel -->
+                <section class="card camera-card-mini">
+                    <h3 class="card-header">ACTIVE DRIVER MONITOR</h3>
+                    <div class="camera-container-mini">
+                        <canvas id="output-canvas" width="280" height="210"></canvas>
+                        <!-- Hidden video element used as media source -->
+                        <video id="webcam" width="280" height="210" autoplay playsinline style="display:none;"></video>
+                        <div id="camera-error" class="camera-error-message hidden mini-error">
+                            NO CAMERA FEED DETECTED.
+                        </div>
+                    </div>
+                </section>
+                <!-- Engine Status Panel -->
+                <section class="card status-card">
+                    <h3 class="card-header">VEHICLE ENGINE IGNITION STATUS</h3>
+                    <div class="ignition-container">
+                        <!-- Interactive Car Ignition Ring Button -->
+                        <div id="ignition-btn" class="engine-btn running" role="button" tabindex="0">
+                            <div class="engine-btn-outer">
+                                <div class="engine-btn-inner">
+                                    <span class="engine-txt-muted">ENGINE</span>
+                                    <span class="engine-txt-main">START</span>
+                                    <span class="engine-txt-muted font-red">STOP</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="status-details">
+                            <h4 id="engine-status-text" class="status-title running">ENGINE ACTIVE</h4>
+                            <p id="engine-status-desc" class="status-desc">System armed. Monitoring driver eyes.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Real-Time Metrics Panel -->
+                <section class="card metrics-card">
+                    <h3 class="card-header">REAL-TIME TELEMETRY</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <span id="ear-display" class="metric-val text-cyan">0.000</span>
+                            <span class="metric-label">EYE ASPECT RATIO (EAR)</span>
+                        </div>
+                        <div class="metric-box">
+                            <span id="timer-display" class="metric-val">0.0s</span>
+                            <span class="metric-label">EYES CLOSED DURATION</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <p class="progress-label">Drowsiness Alert Timer Progression:</p>
+                        <div class="progress-track">
+                            <div id="progress-bar" class="progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Parameter Configurations Panel -->
+                <section class="card settings-card">
+                    <h3 class="card-header">SYSTEM PARAMETER CONFIGURATION</h3>
+                    
+                    <!-- Slider 1: EAR Sensitivity -->
+                    <div class="slider-group">
+                        <div class="slider-labels">
+                            <span class="slider-title">Eye Close EAR Sensitivity</span>
+                            <span id="ear-threshold-val" class="slider-val text-cyan">0.22</span>
+                        </div>
+                        <input type="range" id="ear-threshold" min="0.15" max="0.32" step="0.01" value="0.22" class="range-slider">
+                    </div>
+
+                    <!-- Slider 2: Eye Close Duration Limit -->
+                    <div class="slider-group">
+                        <div class="slider-labels">
+                            <span class="slider-title">Trigger Alarm Delay Limit (s)</span>
+                            <span id="trigger-delay-val" class="slider-val text-cyan">2.5s</span>
+                        </div>
+                        <input type="range" id="trigger-delay" min="1.0" max="5.0" step="0.1" value="2.5" class="range-slider">
+                    </div>
+
+                    <!-- Slider 3: Alarm Playtime -->
+                    <div class="slider-group">
+                        <div class="slider-labels">
+                            <span class="slider-title">Active Siren Warning Playtime (s)</span>
+                            <span id="alarm-duration-val" class="slider-val text-cyan">3.0s</span>
+                        </div>
+                        <input type="range" id="alarm-duration" min="1.0" max="5.0" step="0.1" value="3.0" class="range-slider">
+                    </div>
+                </section>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Core App Logic -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
