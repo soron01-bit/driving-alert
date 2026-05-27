@@ -37,7 +37,7 @@ class DrowsinessDetectorApp:
         self.alarm_start_time = None
         
         # Adjustable parameters (bind to Tkinter control variables)
-        self.ear_threshold = tk.DoubleVar(value=0.22)
+        self.ear_threshold = tk.DoubleVar(value=0.20)
         self.drowsiness_threshold = tk.DoubleVar(value=2.5) # seconds
         self.alarm_duration = tk.DoubleVar(value=3.0)       # seconds
 
@@ -313,7 +313,7 @@ class DrowsinessDetectorApp:
         s1_lbl_frame = tk.Frame(s1_frame, bg=CARD_BG)
         s1_lbl_frame.pack(fill=tk.X)
         tk.Label(s1_lbl_frame, text="Eye Close EAR Sensitivity", font=("Segoe UI", 9, "bold"), fg=TEXT_COLOR, bg=CARD_BG).pack(side=tk.LEFT)
-        self.s1_val = tk.Label(s1_lbl_frame, text="0.22", font=("Consolas", 9, "bold"), fg=COLOR_CYAN, bg=CARD_BG)
+        self.s1_val = tk.Label(s1_lbl_frame, text="0.20", font=("Consolas", 9, "bold"), fg=COLOR_CYAN, bg=CARD_BG)
         self.s1_val.pack(side=tk.RIGHT)
         
         s1_scale = ttk.Scale(

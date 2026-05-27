@@ -51,6 +51,17 @@ let itemPickups = []; // plus/health pickup items
 let lastItemTime = 0;
 let wheelAngle = 0; // steering wheel rotation angle
 
+// Image Assets & Selection
+let carImages = {
+    car1: null,
+    car2: null,
+    car3: null
+};
+let roadImage = null;
+let natureImage = null;
+let activePlayerCarKey = "car1";
+let scrollOffset = 0;
+
 // Track high score in local storage
 if (localStorage.getItem("drowsy_high_score")) {
     highScore = parseInt(localStorage.getItem("drowsy_high_score"), 10);
@@ -392,6 +403,72 @@ function getRandomColor() {
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
+function loadImage(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+            console.warn(`Failed to load image asset: ${src}`);
+            resolve(null);
+        };
+        img.src = src;
+    });
+}
+
+function getObstacleCarKey() {
+    const obstacleKeys = ["car1", "car2", "car3"].filter(k => k !== activePlayerCarKey);
+    return obstacleKeys[Math.floor(Math.random() * obstacleKeys.length)];
+}
+
+function drawCarImage(ctx, cx, cy, img, fallbackColor, isPlayer = false) {
+    if (img && img.complete && img.naturalWidth !== 0) {
+        ctx.save();
+        
+        // Draw Headlight glowing beams if engine is running
+        if (engineState === "RUNNING") {
+            const w = 44;
+            const h = 76;
+            const lightGlow = ctx.createLinearGradient(cx, cy - h * 0.45, cx, cy - h * 0.9);
+            lightGlow.addColorStop(0, "rgba(56, 189, 248, 0.5)");
+            lightGlow.addColorStop(1, "rgba(56, 189, 248, 0)");
+            ctx.fillStyle = lightGlow;
+            ctx.beginPath();
+            ctx.moveTo(cx - w * 0.35, cy - h * 0.45);
+            ctx.lineTo(cx - w * 0.65, cy - h * 0.95);
+            ctx.lineTo(cx - w * 0.05, cy - h * 0.95);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx + w * 0.05, cy - h * 0.45);
+            ctx.lineTo(cx + w * 0.05, cy - h * 0.95);
+            ctx.lineTo(cx + w * 0.65, cy - h * 0.95);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Draw the physical car image centered
+        ctx.drawImage(img, cx - 22, cy - 38, 44, 76);
+
+        // Draw exhaust flames if running and moving
+        if (engineState === "RUNNING" && speed > 1) {
+            const w = 44;
+            const h = 76;
+            const flameColor = Math.random() > 0.5 ? "#f43f5e" : "#ff7849";
+            ctx.fillStyle = flameColor;
+            ctx.beginPath();
+            ctx.arc(cx - w * 0.22, cy + h * 0.46, 3 * (0.8 + Math.random() * 0.4), 0, Math.PI * 2);
+            ctx.arc(cx + w * 0.22, cy + h * 0.46, 3 * (0.8 + Math.random() * 0.4), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    } else {
+        // Fallback to original vector drawing if image didn't load
+        drawTopDownCar(ctx, cx, cy, fallbackColor, isPlayer);
+    }
+}
+
 // // Draw top-down car vector representation matching reference layout
 function drawTopDownCar(ctx, cx, cy, color, isPlayer) {
     ctx.save();
@@ -707,6 +784,7 @@ function updateGame() {
 
     // 3. Scroll Road Y
     roadY = (roadY + speed * 2.5) % 100;
+    scrollOffset += speed * 2.5;
 
     // 4. Manage Obstacles spawning (3 vertical lanes)
     const currentTime = performance.now();
@@ -723,7 +801,8 @@ function updateGame() {
                     x: laneXCoord,
                     y: -80,
                     color: getRandomColor(),
-                    speedOffset: Math.random() * 2.0 - 1.0
+                    speedOffset: Math.random() * 2.0 - 1.0,
+                    carKey: getObstacleCarKey()
                 });
                 lastObstacleTime = currentTime;
             }
@@ -870,52 +949,83 @@ function drawGame() {
     gameCtx.save();
     gameCtx.translate(shakeX, shakeY);
 
-    // 2. Draw Background Side Grids (Cyberpunk neon look)
-    gameCtx.fillStyle = "#0c0a1a"; // Dark purple deep space
-    gameCtx.fillRect(0, 0, 860, 478);
+    // 2. Draw Background Side Grids (Cyberpunk neon look or Scrolling Nature Background)
+    if (natureImage && natureImage.complete && natureImage.naturalWidth !== 0) {
+        const scaledHeight = 230 * (natureImage.height / natureImage.width);
+        const yOffset = (scrollOffset) % scaledHeight;
+        
+        // Draw left side scenery (X = 0 to 230)
+        let startY = yOffset - scaledHeight;
+        while (startY < 478) {
+            gameCtx.drawImage(natureImage, 0, startY, 230, scaledHeight);
+            startY += scaledHeight;
+        }
 
-    // Side scrolling grid lines (Left side X = 0 to 230)
-    gameCtx.strokeStyle = "rgba(236, 72, 153, 0.1)";
-    gameCtx.lineWidth = 1;
-    for (let gx = 15; gx < 230; gx += 40) {
-        gameCtx.beginPath();
-        gameCtx.moveTo(gx, 0);
-        gameCtx.lineTo(gx, 478);
-        gameCtx.stroke();
-    }
-    for (let gy = (roadY * 1.5) % 40; gy < 478; gy += 40) {
-        gameCtx.beginPath();
-        gameCtx.moveTo(0, gy);
-        gameCtx.lineTo(230, gy);
-        gameCtx.stroke();
-    }
+        // Draw right side scenery (X = 630 to 860)
+        startY = yOffset - scaledHeight;
+        while (startY < 478) {
+            gameCtx.drawImage(natureImage, 630, startY, 230, scaledHeight);
+            startY += scaledHeight;
+        }
+    } else {
+        // Fallback to Cyberpunk neon look
+        gameCtx.fillStyle = "#0c0a1a"; // Dark purple deep space
+        gameCtx.fillRect(0, 0, 860, 478);
 
-    // Side scrolling grid lines (Right side X = 630 to 860)
-    for (let gx = 650; gx < 860; gx += 40) {
-        gameCtx.beginPath();
-        gameCtx.moveTo(gx, 0);
-        gameCtx.lineTo(gx, 478);
-        gameCtx.stroke();
-    }
-    for (let gy = (roadY * 1.5) % 40; gy < 478; gy += 40) {
-        gameCtx.beginPath();
-        gameCtx.moveTo(630, gy);
-        gameCtx.lineTo(860, gy);
-        gameCtx.stroke();
+        // Side scrolling grid lines (Left side X = 0 to 230)
+        gameCtx.strokeStyle = "rgba(236, 72, 153, 0.1)";
+        gameCtx.lineWidth = 1;
+        for (let gx = 15; gx < 230; gx += 40) {
+            gameCtx.beginPath();
+            gameCtx.moveTo(gx, 0);
+            gameCtx.lineTo(gx, 478);
+            gameCtx.stroke();
+        }
+        for (let gy = (roadY * 1.5) % 40; gy < 478; gy += 40) {
+            gameCtx.beginPath();
+            gameCtx.moveTo(0, gy);
+            gameCtx.lineTo(230, gy);
+            gameCtx.stroke();
+        }
+
+        // Side scrolling grid lines (Right side X = 630 to 860)
+        for (let gx = 650; gx < 860; gx += 40) {
+            gameCtx.beginPath();
+            gameCtx.moveTo(gx, 0);
+            gameCtx.lineTo(gx, 478);
+            gameCtx.stroke();
+        }
+        for (let gy = (roadY * 1.5) % 40; gy < 478; gy += 40) {
+            gameCtx.beginPath();
+            gameCtx.moveTo(630, gy);
+            gameCtx.lineTo(860, gy);
+            gameCtx.stroke();
+        }
     }
 
     // 3. Draw Asphalt Road Surface (X = 230 to 630)
-    gameCtx.fillStyle = "#1e293b"; // Slate asphalt grey
-    gameCtx.fillRect(230, 0, 400, 478);
+    if (roadImage && roadImage.complete && roadImage.naturalWidth !== 0) {
+        const roadScaledHeight = 400 * (roadImage.height / roadImage.width);
+        const roadYOffset = (scrollOffset) % roadScaledHeight;
+        let roadStartY = roadYOffset - roadScaledHeight;
+        while (roadStartY < 478) {
+            gameCtx.drawImage(roadImage, 230, roadStartY, 400, roadScaledHeight);
+            roadStartY += roadScaledHeight;
+        }
+    } else {
+        // Fallback road
+        gameCtx.fillStyle = "#1e293b"; // Slate asphalt grey
+        gameCtx.fillRect(230, 0, 400, 478);
 
-    // Darker asphalt center lanes (X = 250 to 610)
-    gameCtx.fillStyle = "#0f172a";
-    gameCtx.fillRect(250, 0, 360, 478);
+        // Darker asphalt center lanes (X = 250 to 610)
+        gameCtx.fillStyle = "#0f172a";
+        gameCtx.fillRect(250, 0, 360, 478);
+    }
 
-    // 4. Draw Scrolling Dashed Divider Lines (Yellow)
-    gameCtx.strokeStyle = "#fbbf24";
-    gameCtx.lineWidth = 5;
-    gameCtx.setLineDash([35, 25]);
+    // 4. Draw Scrolling Dashed Divider Lines (Subtle White Highway Markings)
+    gameCtx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    gameCtx.lineWidth = 3;
+    gameCtx.setLineDash([25, 25]);
     gameCtx.lineDashOffset = -roadY * 2.2;
 
     // Left Divider
@@ -932,26 +1042,7 @@ function drawGame() {
 
     gameCtx.setLineDash([]);
 
-    // 5. Draw 3D Cylindrical Guard Rails (Left and Right edges of road)
-    const leftGrad = gameCtx.createLinearGradient(230, 0, 250, 0);
-    leftGrad.addColorStop(0, "#020617");
-    leftGrad.addColorStop(0.3, "#334155");
-    leftGrad.addColorStop(0.5, "#94a3b8");
-    leftGrad.addColorStop(0.7, "#334155");
-    leftGrad.addColorStop(1, "#020617");
-    gameCtx.fillStyle = leftGrad;
-    gameCtx.fillRect(230, 0, 20, 478);
-
-    const rightGrad = gameCtx.createLinearGradient(610, 0, 630, 0);
-    rightGrad.addColorStop(0, "#020617");
-    rightGrad.addColorStop(0.3, "#334155");
-    rightGrad.addColorStop(0.5, "#94a3b8");
-    rightGrad.addColorStop(0.7, "#334155");
-    rightGrad.addColorStop(1, "#020617");
-    gameCtx.fillStyle = rightGrad;
-    gameCtx.fillRect(610, 0, 20, 478);
-
-    // 6. Draw speedline warp particles (if boosting)
+    // 5. Draw speedline warp particles (if boosting)
     for (let p of particles) {
         if (p.type === 'speedline') {
             gameCtx.strokeStyle = p.color;
@@ -963,55 +1054,20 @@ function drawGame() {
         }
     }
 
-    // 7. Draw Item Pickups (Plus items)
+    // 6. Draw Item Pickups (Plus items)
     for (let it of itemPickups) {
         drawItemPickup(gameCtx, it.x, it.y);
     }
 
-    // 8. Draw Obstacle Vehicles (Top-down)
+    // 7. Draw Obstacle Vehicles (Top-down)
     for (let obs of obstacles) {
-        drawTopDownCar(gameCtx, obs.x, obs.y, obs.color, false);
-
-        // Draw Holographic lock-on brackets warning if close
-        if (engineState === "RUNNING" && obs.y > 100 && obs.y < 350) {
-            gameCtx.save();
-            gameCtx.strokeStyle = "#f43f5e";
-            gameCtx.lineWidth = 2;
-            const size = 62;
-            const rx = obs.x;
-            const ry = obs.y;
-            
-            const pulse = (Math.sin(performance.now() * 0.015) + 1) * 0.25 + 0.5;
-            gameCtx.globalAlpha = pulse;
-
-            // Draw brackets
-            const len = 12;
-            gameCtx.beginPath();
-            gameCtx.moveTo(rx - size/2, ry - size/2 + len);
-            gameCtx.lineTo(rx - size/2, ry - size/2);
-            gameCtx.lineTo(rx - size/2 + len, ry - size/2);
-            gameCtx.moveTo(rx + size/2 - len, ry - size/2);
-            gameCtx.lineTo(rx + size/2, ry - size/2);
-            gameCtx.lineTo(rx + size/2, ry - size/2 + len);
-            gameCtx.moveTo(rx - size/2, ry + size/2 - len);
-            gameCtx.lineTo(rx - size/2, ry + size/2);
-            gameCtx.lineTo(rx - size/2 + len, ry + size/2);
-            gameCtx.moveTo(rx + size/2 - len, ry + size/2);
-            gameCtx.lineTo(rx + size/2, ry + size/2);
-            gameCtx.lineTo(rx + size/2, ry + size/2 - len);
-            gameCtx.stroke();
-
-            gameCtx.fillStyle = "#f43f5e";
-            gameCtx.font = "700 9px 'Consolas', monospace";
-            gameCtx.textAlign = "center";
-            const dist = Math.round((380 - obs.y) * 0.25);
-            gameCtx.fillText("WARN: " + dist + "M", rx, ry - size/2 - 6);
-            gameCtx.restore();
-        }
+        const obsImg = carImages[obs.carKey] || carImages.car2;
+        drawCarImage(gameCtx, obs.x, obs.y, obsImg, obs.color, false);
     }
 
-    // 9. Draw Player Vehicle (Top-down Sporty Yellow Car)
-    drawTopDownCar(gameCtx, playerX, 380, "#f59e0b", true);
+    // 9. Draw Player Vehicle (Top-down Sporty Selected Car)
+    const playerImg = carImages[activePlayerCarKey] || carImages.car1;
+    drawCarImage(gameCtx, playerX, 380, playerImg, "#f59e0b", true);
 
     // 9.5 Draw Rotating Steering Wheel on left side of frame
     drawSteeringWheel(gameCtx, 115, 380, wheelAngle);
@@ -1115,6 +1171,23 @@ function gameLoop() {
 // System Boot Initialization
 async function initializeApp() {
     try {
+        // 0. Load Game Visual Assets
+        carImages.car1 = await loadImage("car1.png");
+        carImages.car2 = await loadImage("car2.png");
+        carImages.car3 = await loadImage("car3.png");
+        roadImage = await loadImage("road.jpg");
+        natureImage = await loadImage("nautre.jpg") || await loadImage("nature.jpg");
+
+        // Set up Vehicle Selector Event Listeners
+        const vehicleOptions = document.querySelectorAll(".vehicle-option");
+        vehicleOptions.forEach(opt => {
+            opt.addEventListener("click", () => {
+                vehicleOptions.forEach(o => o.classList.remove("active"));
+                opt.classList.add("active");
+                activePlayerCarKey = opt.getAttribute("data-car");
+            });
+        });
+
         // 1. Initialize WASM Fileset Resolver
         const vision = await FilesetResolver.forVisionTasks(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
@@ -1144,8 +1217,6 @@ async function initializeApp() {
 
         webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
         webcamElement.srcObject = webcamStream;
-
-
 
         // Wait for video metadata to load before beginning loops
         webcamElement.addEventListener("loadedmetadata", () => {

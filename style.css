@@ -497,6 +497,79 @@ body {
     transform: scale(1.2);
 }
 
+/* Vehicle Selector Panel CSS */
+.vehicle-selector {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 15px;
+}
+
+.vehicle-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px 5px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.vehicle-option:hover {
+    border-color: var(--color-cyan);
+    background-color: rgba(6, 182, 212, 0.05);
+}
+
+.vehicle-option.active {
+    border-color: var(--color-cyan);
+    background-color: rgba(6, 182, 212, 0.1);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+
+.car-preview {
+    width: 32px;
+    height: 55px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+    transition: transform 0.2s ease;
+}
+
+.vehicle-option:hover .car-preview {
+    transform: scale(1.1);
+}
+
+.car1-preview {
+    background-image: url('car1.png');
+}
+
+.car2-preview {
+    background-image: url('car2.png');
+}
+
+.car3-preview {
+    background-image: url('car3.png');
+}
+
+.vehicle-name {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.vehicle-option.active .vehicle-name {
+    color: var(--color-cyan);
+}
+
 /* Responsiveness overrides */
 @media (max-width: 1000px) {
     .dashboard-grid {
